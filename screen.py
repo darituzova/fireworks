@@ -22,5 +22,7 @@ while running:
             if event.key == pygame.K_ESCAPE: # Клавища ESC - выход
                 running = False
     
+    pygame.display.flip()
+    clock.tick(60)
     
     
