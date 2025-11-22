@@ -38,8 +38,8 @@ pygame.display.set_caption('Частица')
 background = (0, 0, 0)
 clock = pygame.time.Clock()
 
-# Создаем одну частицу  (пока из центра экрана, потом будет из центра фейерверка)
-particle = Particle(width // 2, height // 2, (random.randint(200, 255), random.randint(100, 200), random.randint(0, 100)))
+# Список всех частиц
+particles = []
 
 # Основной цикл
 running = True
@@ -55,11 +55,15 @@ while running:
             if event.key == pygame.K_ESCAPE: # Клавища ESC - выход
                 running = False
     
-    if particle.is_alive():
+    new_particle = Particle(random.randint(0, width), random.randint(0, height), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+    particles.append(new_particle)
+    
+    for particle in particles[:]: # Испольуем копию списка, чтобы безопасно удалять частицы
         particle.update()
         particle.draw(screen)
-    else:
-        particle = Particle(width // 2, height // 2, (random.randint(200, 255), random.randint(100, 200), random.randint(0, 100)))
+        
+        if not particle.is_alive():
+            particles.remove(particle)
     
     pygame.display.flip()
     clock.tick(60)
