@@ -68,8 +68,12 @@ pygame.display.set_caption('Фейерверк')
 background = (0, 0, 0)
 clock = pygame.time.Clock()
 
-# Создаем один фейерверк
-firework = Firework(random.randint(20, height - 20), height)
+# Список всех фейерверков
+fireworks = []
+
+# Таймер для фейерверков
+firework_timer = 0
+firework_interval = 30
 
 # Основной цикл
 running = True
@@ -85,11 +89,18 @@ while running:
             if event.key == pygame.K_ESCAPE: # Клавища ESC - выход
                 running = False
     
-    if firework.is_alive():
+    firework_timer += 1
+    if firework_timer >= firework_interval:
+        new_firework = Firework(random.randint(20, width - 20), height)
+        fireworks.append(new_firework)
+        firework_timer = 0
+        
+    for firework in fireworks[:]: # Испольуем копию списка, чтобы безопасно удалять фейерверки
         firework.update()
         firework.draw(screen)
-    else:
-        firework = Firework(random.randint(20, height - 20),  height )
+            
+        if not firework.is_alive():
+            fireworks.remove(firework)
     
     pygame.display.flip()
     clock.tick(60)
