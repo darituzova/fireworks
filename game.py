@@ -1,6 +1,5 @@
 import pygame
 import random
-from particle import Particle
 from firework import Firework
 
 class Game:
