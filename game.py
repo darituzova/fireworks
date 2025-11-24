@@ -27,6 +27,15 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE: # Клавища ESC - выход
                     self.running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:  # Добавляем обработку клика мыши
+                if event.button == 1:  # Левая кнопка мыши
+                    self.create_firework_at_pos(event.pos)
+    
+    def create_firework_at_pos(self, pos):
+        # Создаем фейерверк в позиции клика
+        x, y = pos
+        new_firework = Firework(x, y, self.diagonal)
+        self.fireworks.append(new_firework)
     
     def spawn_random_firework(self):
         # Если diagonal=True, создаем диагональные фейерверки, иначе вертикальные

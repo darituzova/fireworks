@@ -1,4 +1,3 @@
-# firework.py
 import pygame
 import random
 from particle import Particle
@@ -33,13 +32,31 @@ class Firework:
             self.direction = random.choice([-1, 1])
             self.initial_speed_x = random.uniform(1, 3) * self.direction
             self.speed_x = self.initial_speed_x
-            # Точка взрыва для диагональных фейерверков
-            self.explosion_height = random.randint(50, pygame.display.get_surface().get_height() - 50)
+            # Точка взрыва - всегда выше текущей позиции с отступами от краев
+            min_explosion_height = 50  # Минимальный отступ от верхнего края
+            max_explosion_height = self.initial_y - 50  # Минимальный отступ от исходной позиции
+
+            # Если исходная позиция слишком низкая (меньше 100px от верха), 
+            # то взрываемся посередине между верхним краем и исходной позицией
+            if max_explosion_height < min_explosion_height:
+                self.explosion_height = (min_explosion_height + self.initial_y) // 2
+            else:
+                self.explosion_height = random.randint(min_explosion_height, max_explosion_height)
+        
+        # Визуальные параметры
         else:
             # Вертикальные фейерверки
             self.speed_x = 0
-            self.explosion_height = random.randint(50, pygame.display.get_surface().get_height() - 50)
-        
+            # Точка взрыва - всегда выше текущей позиции с отступами от краев
+            min_explosion_height = 50  # Минимальный отступ от верхнего края
+            max_explosion_height = self.initial_y - 50  # Минимальный отступ от исходной позиции
+
+            # Если исходная позиция слишком низкая (меньше 100px от верха), 
+            # то взрываемся посередине между верхним краем и исходной позицией
+            if max_explosion_height < min_explosion_height:
+                self.explosion_height = (min_explosion_height + self.initial_y) // 2
+            else:
+                self.explosion_height = random.randint(min_explosion_height, max_explosion_height)    
         # Визуальные параметры
         self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         self.exploded = False # Флаг на взрыв
@@ -192,6 +209,13 @@ if __name__ == "__main__":
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE: # Клавища ESC - выход
                     running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:  # Добавляем обработку клика мыши
+                if event.button == 1:  # Левая кнопка мыши
+                    # Создаем фейерверк в позиции клика
+                    x, y = event.pos
+                    diagonal = random.choice([True, False])
+                    new_firework = Firework(x, y, diagonal)
+                    fireworks.append(new_firework)
         
         firework_timer += 1
         if firework_timer >= firework_interval:
