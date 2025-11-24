@@ -2,7 +2,7 @@ import pygame
 import random
 from firework import Firework
 
-# Класс - Игрв
+# Класс - Игра
 class Game:
     # Инициализация параметров игры
     def __init__(self, width=1000, height=800, caption='Фейерверки', background=(0, 0, 0), firework_interval=30, diagonal=False, margin_x=20, fps=60, config=None):
