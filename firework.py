@@ -5,7 +5,13 @@ from particle import Particle
 # Класс - фейерверк
 class Firework:
     # Инициализация
-    def __init__(self, x, y, diagonal=False):
+    def __init__(self, x, y, diagonal=False, config=None):
+        if config is None:
+            config = {}
+        
+        # Получаем настройки для фейерверка
+        config_firework = config.get('firework', {})
+        
         # Позиция фейерверка
         self.x = x
         self.y = y
@@ -16,13 +22,15 @@ class Firework:
         
         # Параметры следа
         self.line = [] # Список для линии взрыва (x, y, size, alpha)
-        self.max_line_length = 30 # Максимальная длина следа
+        self.max_line_length = config_firework.get('line_max_length', 30)
         self.line_counter = 0 # Таймер между созданиями точек
-        self.line_spacing = 2.5  # Интервал между созданием новых точек
-        self.base_size = 2.6 # Базовый размер для центрирования
+        self.line_spacing = config_firework.get('line_spacing', 2.5)
+        self.line_fade_speed = config_firework.get('line_fade_speed', 8)
+        self.base_size = config_firework.get('base_size', 2.6)
         
         # Физические параметры
-        self.initial_speed_y = random.uniform(-7, -2)  # Начальная скорость (отрицательная - движение вверх)
+        initial_speed_y_range = config_firework.get('initial_speed_y_range', [-7, -2])
+        self.initial_speed_y = random.uniform(initial_speed_y_range[0], initial_speed_y_range[1])
         self.speed_y = self.initial_speed_y
         
         # Для диагональных фейерверков
@@ -30,36 +38,31 @@ class Firework:
         if self.diagonal:
             # Случайное направление: влево или вправо
             self.direction = random.choice([-1, 1])
-            self.initial_speed_x = random.uniform(1, 3) * self.direction
+            diagonal_speed_x_range = config_firework.get('diagonal_speed_x_range', [1, 3])
+            self.initial_speed_x = random.uniform(diagonal_speed_x_range[0], diagonal_speed_x_range[1]) * self.direction
             self.speed_x = self.initial_speed_x
-            # Точка взрыва - всегда выше текущей позиции с отступами от краев
-            min_explosion_height = 50  # Минимальный отступ от верхнего края
-            max_explosion_height = self.initial_y - 50  # Минимальный отступ от исходной позиции
-
-            # Если исходная позиция слишком низкая (меньше 100px от верха), 
-            # то взрываемся посередине между верхним краем и исходной позицией
-            if max_explosion_height < min_explosion_height:
-                self.explosion_height = (min_explosion_height + self.initial_y) // 2
-            else:
-                self.explosion_height = random.randint(min_explosion_height, max_explosion_height)
         
         # Визуальные параметры
         else:
             # Вертикальные фейерверки
             self.speed_x = 0
-            # Точка взрыва - всегда выше текущей позиции с отступами от краев
-            min_explosion_height = 50  # Минимальный отступ от верхнего края
-            max_explosion_height = self.initial_y - 50  # Минимальный отступ от исходной позиции
+        
+        # Точка взрыва - всегда выше текущей позиции с отступами от краев
+        min_explosion_height = config_firework.get('min_explosion_height', 50)
+        max_explosion_height_offset = config_firework.get('max_explosion_height_offset', 50)
+        max_explosion_height = self.initial_y - max_explosion_height_offset
 
-            # Если исходная позиция слишком низкая (меньше 100px от верха), 
-            # то взрываемся посередине между верхним краем и исходной позицией
-            if max_explosion_height < min_explosion_height:
-                self.explosion_height = (min_explosion_height + self.initial_y) // 2
-            else:
-                self.explosion_height = random.randint(min_explosion_height, max_explosion_height)    
+        # Если исходная позиция слишком низкая, то взрываемся посередине
+        if max_explosion_height < min_explosion_height:
+            self.explosion_height = (min_explosion_height + self.initial_y) // 2
+        else:
+            self.explosion_height = random.randint(min_explosion_height, max_explosion_height)
+            
         # Визуальные параметры
         self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         self.exploded = False # Флаг на взрыв
+        self.config = config
+        self.config_firework = config_firework
     
     # Обновление состояния фейерверка
     def update(self):
@@ -121,7 +124,7 @@ class Firework:
         # Уменьшение альфа-канала всех точек
         for i in range(len(self.line)):
             x, y, size, alpha = self.line[i]
-            self.line[i] = (x, y, size, max(0, alpha - 8))  # Медленное затухание
+            self.line[i] = (x, y, size, max(0, alpha - self.line_fade_speed))
         
         # Удаление полностью прозрачных точек
         self.line = [(x, y, size, alpha) for x, y, size, alpha in self.line if alpha > 0]
@@ -138,13 +141,17 @@ class Firework:
         self.exploded = True
         
         # Создание частиц взрыва с одинаковым временем жизни
-        number_particles = random.randint(100, 200)
-        particle_lifetime = random.randint(40, 80)  # Общее время жизни для всех частиц
+        particles_count_range = self.config_firework.get('particles_count_range', [100, 200])
+        number_particles = random.randint(particles_count_range[0], particles_count_range[1])
+        
+        particles_lifetime_range = self.config_firework.get('particles_lifetime_range', [40, 80])
+        particle_lifetime = random.randint(particles_lifetime_range[0], particles_lifetime_range[1])
         
         for _ in range(number_particles):
-            particle = Particle(self.x, self.y, self.color)
-            particle.lifetime = particle_lifetime  # Устанавливаем одинаковое время жизни
-            particle.max_lifetime = particle_lifetime  # И максимальное время жизни тоже одинаковое
+            # Передаем полный конфиг, Particle сам выберет нужные настройки
+            particle = Particle(self.x, self.y, self.color, self.config)
+            particle.lifetime = particle_lifetime
+            particle.max_lifetime = particle_lifetime
             self.particles.append(particle)
         
     # Проверка на то, что или фейерверк еще не взорвался или он пока взрывется и его частицы живы
