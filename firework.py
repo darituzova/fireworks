@@ -6,38 +6,87 @@ from particle import Particle
 class Firework:
     # Инициализация
     def __init__(self, x, y):
+        # Позиция фейерверка
         self.x = x
         self.y = y
+        self.initial_y = y  # Сохраняем начальную позицию Y для расчета прогресса
         
         self.particles = [] # Список частиц (объектов класса Particle)
-        self.line = [] # Список для линии взрыва
-        self.speed_y = random.uniform(-7, -2) # Скорость отрицательная, так как по коордиантам идем вверх
+        
+        # Параметры следа
+        self.line = [] # Список для линии взрыва (x, y, size, alpha)
+        self.max_line_length = 30 # Максимальная длина следа
+        self.line_counter = 0 # Таймер между созданиями точек
+        self.line_spacing = 2.5  # Интервал между созданием новых точек
+        self.base_size = 2.6 # Базовый размер для центрирования
+        
+        # Физические параметры
+        self.initial_speed_y = random.uniform(-7, -2)  # Начальная скорость (отрицательная - движение вверх)
+        self.speed_y = self.initial_speed_y
+        self.explosion_height = random.randint(50, pygame.display.get_surface().get_height() - 50) # Рандомная точка взрыва
+        
+        # Визуальные параметры
         self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         self.exploded = False # Флаг на взрыв
-        self.explosion_height = random.randint(50, pygame.display.get_surface().get_height() - 50) # Рандомная точка взрыва
-        self.size_line = random.randint(1, 2)
     
-    # Обновление позиций линии фейерверка или его частиц
+    # Обновление состояния фейерверка
     def update(self):
-        if not self.exploded: # Если еще не было взрыва
-            self.line.append((self.x, self.y)) # Максимум точек в следе 10
-            if len(self.line) > 10:
-                self.line.pop(0)
+        if not self.exploded:
+            self._update_flying()
+        else:
+            self._update_explosion()
             
-            self.y += self.speed_y
-            if self.y < self.explosion_height: # Знак <, так как работаем в координтной плоскости
-                self.explode()
+    # Обновление полета (до взрыва)
+    def _update_flying(self):
+        # Расчет прогресса полета (0 в начале, 1 в точке взрыва)
+        total_distance = self.initial_y - self.explosion_height
+        current_distance = self.initial_y - self.y
+        progress = current_distance / total_distance
         
-        else: # Произошел взрыв
-            for particle in self.particles[:]: # Испольуем копию списка, чтобы безопасно удалять частицы
-                particle.update()
-                if not particle.is_alive():
-                    self.particles.remove(particle) 
+        # Замедление скорости на последних 40% пути
+        if progress > 0.6:
+            slowdown_factor = 1 - (progress - 0.6) / 0.4
+            self.speed_y = self.initial_speed_y * (0.5 + 0.5 * slowdown_factor)
+        
+        self._add_line_point() # Добавление новой точки следа
+        self._update_line() # Обновление существующих точек следа
+        self.y += self.speed_y # Перемещение фейерверка
+        
+        # Проверка достижения точки взрыва
+        if self.y <= self.explosion_height:
+            self.explode()
+    
+    # Добавление новой точки в след
+    def _add_line_point(self):
+        self.line_counter += 1
+        if self.line_counter >= self.line_spacing:
+            # Длина следа зависит от текущей скорости
+            current_line_length = self.max_line_length * (0.6 + 0.4 * abs(self.speed_y / self.initial_speed_y))
+            self.line.append((self.x, self.y, current_line_length, 255))  # Новая точка с максимальной альфой
+            self.line_counter = 0
+    
+    # Обновление точек следа (уменьшение альфа-канала)
+    def _update_line(self):
+        # Уменьшение альфа-канала всех точек
+        for i in range(len(self.line)):
+            x, y, size, alpha = self.line[i]
+            self.line[i] = (x, y, size, max(0, alpha - 8))  # Медленное затухание
+        
+        # Удаление полностью прозрачных точек
+        self.line = [(x, y, size, alpha) for x, y, size, alpha in self.line if alpha > 0]
+    
+    # Обновление взрыва (после детонации)
+    def _update_explosion(self):
+        for particle in self.particles[:]:
+            particle.update()
+            if not particle.is_alive():
+                self.particles.remove(particle)
     
     # Взрыв
     def explode(self):
         self.exploded = True
         
+        # Создание частиц взрыва
         number_particles = random.randint(100, 200)
         for _ in range(number_particles):
             self.particles.append(Particle(self.x, self.y, self.color))
@@ -46,19 +95,34 @@ class Firework:
     def is_alive(self):
         return not self.exploded or len(self.particles) > 0
     
-    # Отрисовка линии фейерверка или частиц через класс
+    # Отрисовка фейерверка
     def draw(self, screen):
-        if not self.exploded: # Если еще не было взрыва
-            # Рисуем линию из точек следа
-            if len(self.line) > 1:
-                for i in range(len(self.line) - 1):
-                    start_pos = (self.line[i][0], self.line[i][1])
-                    end_pos = (self.line[i + 1][0], self.line[i + 1][1])
-                    pygame.draw.line(screen, self.color, start_pos, end_pos, self.size_line)
-            
-        else: # Произошел взрыв
-            for particle in self.particles:
-                particle.draw(screen)   
+        if not self.exploded:
+            self._draw_line(screen)
+        else:
+            self._draw_explosion(screen)
+    
+    # Отрисовка следа
+    def _draw_line(self, screen):
+        for x, y, size, alpha in self.line:
+            if alpha > 0:
+                # Расчет размера и прозрачности точки
+                circle_size = max(1, size / 8)
+                
+                # Создание поверхности с альфа-каналом
+                max_surface_size = int(self.base_size * 2 + 2)
+                circle_surface = pygame.Surface((max_surface_size, max_surface_size), pygame.SRCALPHA)
+                circle_color = (*self.color, int(alpha))
+                
+                # Отрисовка точки
+                center_x, center_y = max_surface_size // 2, max_surface_size // 2
+                pygame.draw.circle(circle_surface, circle_color, (center_x, center_y), circle_size)
+                screen.blit(circle_surface, (x - center_x, y - center_y))
+    
+    # Отрисовка взрыва
+    def _draw_explosion(self, screen):
+        for particle in self.particles:
+            particle.draw(screen)
 
 if __name__ == "__main__":        
     # Экран
