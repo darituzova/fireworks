@@ -1,31 +1,30 @@
 from game import Game
 import json
-import os
 
+# Загружает конфигурацию из JSON файла
 def load_config(name):
-    config_file = name
-    
-    # Проверяем существование файла
-    if not os.path.exists(config_file):
-        print(f'Файл {config_file} не найден. Используются значения по умолчанию.')
-        return None
-    
     try:
-        with open(config_file, 'r', encoding='UTF-8') as f:
+        # Попытка открыть и прочитать конфигурационный файл
+        with open(name, 'r', encoding='UTF-8') as f:
             config = json.load(f)
-        print(f'Конфигурация загружена из {config_file}')
+        print(f'Конфигурация загружена из {name}')
         return config
+    except FileNotFoundError:
+        # Обработка случая, когда файл не найден
+        print(f'Файл {name} не найден. Используются значения по умолчанию.')
+        return None
     except Exception as e:
-        print(f'Неожиданная ошибка при чтении {config_file}: {e}')
+        # Обработка всех других ошибок (невалидный JSON, и т.д.)
+        print(f'Ошибка при чтении {name}: {e}')
         print('Используются значения по умолчанию.')
         return None
 
-# Загрузка конфигурации
-name = 'config/config_base.json'
-config = load_config(name)
+# Загрузка конфигурации из файла
+config = load_config('config/config_base.json')
 
-# Создание игры с параметрами из конфигурации или значениями по умолчанию
+# Создание экземпляра игры с параметрами из конфигурации или значениями по умолчанию
 if config:
+    # Если конфигурация загружена, используем значения из нее (учитываем, что может не оказаться ключа в json)
     game = Game(width=config.get('width', 1000),
                 height=config.get('height', 800),
                 background=tuple(config.get('background', [0, 0, 0])),
@@ -35,7 +34,8 @@ if config:
                 fps=config.get('fps', 60),
                 config=config)
 else:
-    # Если конфиг не загружен, используем все значения по умолчанию
+    # Если конфигурация не загружена, используем все значения по умолчанию
     game = Game()
 
+# Запуск основного цикла игры
 game.run()

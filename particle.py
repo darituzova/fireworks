@@ -6,36 +6,38 @@ import math
 class Particle:
     # Инициализация
     def __init__(self, x, y, color, config=None):
+        # Инициализация конфигурации
         if config is None:
             config = {}
-        
-        # Получаем настройки для частиц
         config_particle = config.get('particle', {})
         
+        # Основные параметры частицы
         self.x = x
         self.y = y
-        self.color = color # От фейерверка зависит
+        self.color = color # Цвет наследуется от фейерверка
         
-        # Создаем круговой взрыв с увеличенной скоростью и радиусом
-        angle = random.uniform(0, 2 * math.pi)  # Случайный угол
+        # Случайное направление движения по кругу
+        angle = random.uniform(0, 2 * math.pi) # Случайный угол от 0 до 360 градусов
         speed_range = config_particle.get('speed_range', [1.5, 3])
         speed = random.uniform(speed_range[0], speed_range[1])
         
-        # Равномерное распределение по кругу
+        # Разложение скорости на компоненты по осям
         self.speed_x = math.cos(angle) * speed
         self.speed_y = math.sin(angle) * speed
         
+        # Визуальные параметры
         size_range = config_particle.get('size_range', [2, 4])
         self.size = random.randint(size_range[0], size_range[1])
         
+        # Время жизни частицы
         lifetime_range = config_particle.get('lifetime_range', [200, 220])
         self.lifetime = random.randint(lifetime_range[0], lifetime_range[1])
         self.max_lifetime = self.lifetime  # Сохраняем максимальное время жизни
         
-        # Параметры следа
-        self.line = [] # Список для линии следа (x, y, size, alpha)
+        # Параметры следа частицы
+        self.line = [] # Список точек следа (x, y, size, alpha)
         self.max_line_length = config_particle.get('line_max_length', 15)
-        self.line_counter = 0 # Таймер между созданиями точек
+        self.line_counter = 0 # Счетчик для создания точек
         self.line_spacing = config_particle.get('line_spacing', 2)
         self.line_fade_speed = config_particle.get('line_fade_speed', 6)
         self.base_size = config_particle.get('base_size', 2.5)
@@ -43,50 +45,51 @@ class Particle:
         # Физические параметры
         self.gravity = config_particle.get('gravity', 0.05)
         
-        # Флаг для плавного затухания
-        self.fading = False
+        # Параметры затухания
+        self.fading = False # Флаг начала затухания
         self.fade_alpha = 255  # Начальная прозрачность
-        self.fade_start = config_particle.get('fade_start', 30)
+        self.fade_start = config_particle.get('fade_start', 30) # Когда начинать затухание
     
-    # Обновление местоположения частицы и ее времени жизни
+    # Обновление состояния частицы на каждом кадре
     def update(self):
-        # Сохраняем позицию до обновления
+        # Сохраняем предыдущую позицию для создания плавного следа
         old_x, old_y = self.x, self.y
         
-        # Обновляем позицию с учетом гравитации
+        # Обновление позиции с учетом гравитации
         self.x += self.speed_x
         self.y += self.speed_y
-        self.speed_y += self.gravity
-        self.lifetime -= 1
+        self.speed_y += self.gravity # Гравитация влияет только на вертикальную скорость
+        self.lifetime -= 1 # Уменьшаем время жизни
         
-        # Начинаем затухание когда время жизни подходит к концу
+        # Активация затухания, когда время жизни подходит к концу
         if self.lifetime <= self.fade_start and not self.fading:
             self.fading = True
         
-        # Обновляем прозрачность при затухании
+        # Обновление прозрачности при затухании
         if self.fading:
+            # Прогресс затухания от 0 до 1
             fade_progress = (self.fade_start - self.lifetime) / self.fade_start
             self.fade_alpha = max(0, 255 - int(255 * fade_progress))
         
-        # Добавляем точки следа
+        # Добавление новых точек следа
         self._add_line_point(old_x, old_y)
         
-        # Обновляем существующие точки следа
+        # Обновление существующих точек следа
         self._update_line()
     
-    # Добавление новой точки в след
+    # Добавление новой точки в след частицы
     def _add_line_point(self, old_x, old_y):
         self.line_counter += 1
         if self.line_counter >= self.line_spacing:
             # Длина следа зависит от текущей скорости
-            speed_factor = min(1.0, (abs(self.speed_x) + abs(self.speed_y)) / 8)
+            speed_factor = min(1.0, (abs(self.speed_x) + abs(self.speed_y)) / 8)  # Чем быстрее движется частица, тем длиннее след
             current_line_length = self.max_line_length * (0.5 + 0.5 * speed_factor)
             
-            # Добавляем точку между старой и новой позицией для плавности
+            # Используем среднюю точку между старым и новым положением для плавности
             mid_x = (old_x + self.x) / 2
             mid_y = (old_y + self.y) / 2
             
-            # Используем текущую прозрачность для точек следа
+            # Прозрачность точек следа не превышает общую прозрачность частицы
             line_alpha = min(220, self.fade_alpha)
             self.line.append((mid_x, mid_y, current_line_length, line_alpha))
             self.line_counter = 0
@@ -96,8 +99,9 @@ class Particle:
         # Уменьшение альфа-канала всех точек с учетом общего затухания
         for i in range(len(self.line)):
             x, y, size, alpha = self.line[i]
-            # Учитываем общую прозрачность при затухании
+            # Уменьшаем прозрачность, но не ниже 0
             new_alpha = max(0, alpha - self.line_fade_speed)
+            # Учитываем общее затухание частицы
             if self.fading:
                 new_alpha = min(new_alpha, self.fade_alpha)
             self.line[i] = (x, y, size, new_alpha)
@@ -121,32 +125,35 @@ class Particle:
             
             # Создание поверхности с альфа-каналом для частицы
             particle_surface = pygame.Surface((self.size * 2 + 2, self.size * 2 + 2), pygame.SRCALPHA)
-            particle_color = (*self.color, alpha)
+            particle_color = (*self.color, alpha) # Цвет с учетом прозрачности
             
             # Отрисовка круглой частицы
-            pygame.draw.circle(particle_surface, particle_color, 
-                            (self.size + 1, self.size + 1), self.size)
+            pygame.draw.circle(particle_surface, particle_color, (self.size + 1, self.size + 1), self.size)
+            
+            # Размещение частицы на экране
             screen.blit(particle_surface, (self.x - self.size - 1, self.y - self.size - 1))
     
     # Отрисовка следа
     def _draw_line(self, screen):
         for x, y, size, alpha in self.line:
-            if alpha > 0:
+            if alpha > 0: # Рисуем только видимые точки
                 # Расчет размера точки следа
                 circle_size = max(0.5, size / 8)
                 
                 # Создание поверхности с альфа-каналом
                 max_surface_size = int(self.base_size * 2 + 2)
                 circle_surface = pygame.Surface((max_surface_size, max_surface_size), pygame.SRCALPHA)
-                circle_color = (*self.color, int(alpha))
+                circle_color = (*self.color, int(alpha)) # Цвет с учетом прозрачности
                 
                 # Отрисовка круглой точки следа
                 center_x, center_y = max_surface_size // 2, max_surface_size // 2
                 pygame.draw.circle(circle_surface, circle_color, (center_x, center_y), circle_size)
+                
+                # Размещение точки следа на экране
                 screen.blit(circle_surface, (x - center_x, y - center_y))
 
 if __name__ == "__main__":
-    # Экран
+    # Инициализация pygame
     pygame.init()
     width, height = 800, 600
     screen = pygame.display.set_mode((width, height))
@@ -171,7 +178,7 @@ if __name__ == "__main__":
                 if event.key == pygame.K_ESCAPE: # Клавища ESC - выход
                     running = False
         
-        # Создаем частицы группами для одновременного исчезновения
+        # Создание групп частиц для тестирования
         if len(particles) == 0 or random.random() < 0.05:
             group_size = random.randint(8, 20)
             group_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
@@ -179,20 +186,25 @@ if __name__ == "__main__":
             base_y = random.randint(0, height)
             group_lifetime = random.randint(60, 100)
             
+            # Создание группы частиц с одинаковым временем жизни
             for _ in range(group_size):
                 particle = Particle(base_x, base_y, group_color)
                 particle.lifetime = group_lifetime
                 particle.max_lifetime = group_lifetime
                 particles.append(particle)
         
+        # Обновление и отрисовка всех частиц
         for particle in particles[:]: # Испольуем копию списка, чтобы безопасно удалять частицы
             particle.update()
             particle.draw(screen)
             
+            # Удаление "мертвых" частиц
             if not particle.is_alive():
                 particles.remove(particle)
         
+        # Обновление дисплея
         pygame.display.flip()
         clock.tick(60)
-        
+    
+    # Завершение работы
     pygame.quit()
