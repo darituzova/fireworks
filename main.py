@@ -1,4 +1,8 @@
 from game import Game
 
-game = Game()
+# Для вертикальных фейерверков
+# game = Game()
+
+# Для диагональных фейерверков
+game = Game(diagonal=True)
 game.run()

@@ -1,3 +1,4 @@
+# firework.py
 import pygame
 import random
 from particle import Particle
@@ -5,11 +6,12 @@ from particle import Particle
 # Класс - фейерверк
 class Firework:
     # Инициализация
-    def __init__(self, x, y):
+    def __init__(self, x, y, diagonal=False):
         # Позиция фейерверка
         self.x = x
         self.y = y
         self.initial_y = y  # Сохраняем начальную позицию Y для расчета прогресса
+        self.initial_x = x  # Сохраняем начальную позицию X для диагональных фейерверков
         
         self.particles = [] # Список частиц (объектов класса Particle)
         
@@ -23,7 +25,20 @@ class Firework:
         # Физические параметры
         self.initial_speed_y = random.uniform(-7, -2)  # Начальная скорость (отрицательная - движение вверх)
         self.speed_y = self.initial_speed_y
-        self.explosion_height = random.randint(50, pygame.display.get_surface().get_height() - 50) # Рандомная точка взрыва
+        
+        # Для диагональных фейерверков
+        self.diagonal = diagonal
+        if self.diagonal:
+            # Случайное направление: влево или вправо
+            self.direction = random.choice([-1, 1])
+            self.initial_speed_x = random.uniform(1, 3) * self.direction
+            self.speed_x = self.initial_speed_x
+            # Точка взрыва для диагональных фейерверков
+            self.explosion_height = random.randint(50, pygame.display.get_surface().get_height() - 50)
+        else:
+            # Вертикальные фейерверки
+            self.speed_x = 0
+            self.explosion_height = random.randint(50, pygame.display.get_surface().get_height() - 50)
         
         # Визуальные параметры
         self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
@@ -38,19 +53,33 @@ class Firework:
             
     # Обновление полета (до взрыва)
     def _update_flying(self):
-        # Расчет прогресса полета (0 в начале, 1 в точке взрыва)
-        total_distance = self.initial_y - self.explosion_height
-        current_distance = self.initial_y - self.y
-        progress = current_distance / total_distance
-        
-        # Замедление скорости на последних 40% пути
-        if progress > 0.6:
-            slowdown_factor = 1 - (progress - 0.6) / 0.4
-            self.speed_y = self.initial_speed_y * (0.5 + 0.5 * slowdown_factor)
+        if self.diagonal:
+            # Для диагональных фейерверков
+            total_distance = self.initial_y - self.explosion_height
+            current_distance = self.initial_y - self.y
+            progress = current_distance / total_distance
+            
+            # Замедление скорости на последних 40% пути
+            if progress > 0.6:
+                slowdown_factor = 1 - (progress - 0.6) / 0.4
+                self.speed_y = self.initial_speed_y * (0.5 + 0.5 * slowdown_factor)
+                self.speed_x = self.initial_speed_x * (0.5 + 0.5 * slowdown_factor)
+        else:
+            # Для вертикальных фейерверков
+            total_distance = self.initial_y - self.explosion_height
+            current_distance = self.initial_y - self.y
+            progress = current_distance / total_distance
+            
+            # Замедление скорости на последних 40% пути
+            if progress > 0.6:
+                slowdown_factor = 1 - (progress - 0.6) / 0.4
+                self.speed_y = self.initial_speed_y * (0.5 + 0.5 * slowdown_factor)
         
         self._add_line_point() # Добавление новой точки следа
         self._update_line() # Обновление существующих точек следа
         self.y += self.speed_y # Перемещение фейерверка
+        if self.diagonal:
+            self.x += self.speed_x # Перемещение по X для диагональных фейерверков
         
         # Проверка достижения точки взрыва
         if self.y <= self.explosion_height:
@@ -61,7 +90,12 @@ class Firework:
         self.line_counter += 1
         if self.line_counter >= self.line_spacing:
             # Длина следа зависит от текущей скорости
-            current_line_length = self.max_line_length * (0.6 + 0.4 * abs(self.speed_y / self.initial_speed_y))
+            if self.diagonal:
+                speed_factor = (abs(self.speed_y) + abs(self.speed_x)) / (abs(self.initial_speed_y) + abs(self.initial_speed_x))
+            else:
+                speed_factor = abs(self.speed_y / self.initial_speed_y)
+                
+            current_line_length = self.max_line_length * (0.6 + 0.4 * speed_factor)
             self.line.append((self.x, self.y, current_line_length, 255))  # Новая точка с максимальной альфой
             self.line_counter = 0
     
@@ -161,7 +195,9 @@ if __name__ == "__main__":
         
         firework_timer += 1
         if firework_timer >= firework_interval:
-            new_firework = Firework(random.randint(20, width - 20), height)
+            # Случайно выбираем тип фейерверка
+            diagonal = random.choice([True, False])
+            new_firework = Firework(random.randint(20, width - 20), height, diagonal)
             fireworks.append(new_firework)
             firework_timer = 0
             

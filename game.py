@@ -3,7 +3,7 @@ import random
 from firework import Firework
 
 class Game:
-    def __init__(self, width=800, height=600, background=(0, 0, 0), firework_interval=30):
+    def __init__(self, width=800, height=600, background=(0, 0, 0), firework_interval=30, diagonal=False):
         pygame.init()
         self.width = width
         self.height = height
@@ -16,6 +16,7 @@ class Game:
         # Таймер для фейерверков
         self.firework_timer = 0
         self.firework_interval = firework_interval
+        self.diagonal = diagonal  # Флаг для диагональных фейерверков
         
         self.running = True
     
@@ -28,7 +29,8 @@ class Game:
                     self.running = False
     
     def spawn_random_firework(self):
-        new_firework = Firework(random.randint(20, self.width - 20), self.height)
+        # Если diagonal=True, создаем диагональные фейерверки, иначе вертикальные
+        new_firework = Firework(random.randint(20, self.width - 20), self.height, self.diagonal)
         self.fireworks.append(new_firework)
     
     def update(self):
