@@ -1,0 +1,32 @@
+{
+    "width": 1200,
+    "height": 900,
+    "background": [0, 0, 0],
+    "firework_interval": 15,
+    "diagonal": true,
+    "margin_x": 5,
+    "fps": 90,
+    "firework": {
+        "initial_speed_y_range": [-12, -3],
+        "diagonal_speed_x_range": [3, 6],
+        "min_explosion_height": 150,
+        "max_explosion_height_offset": 150,
+        "line_max_length": 15,
+        "line_spacing": 1,
+        "line_fade_speed": 15,
+        "base_size": 1.8,
+        "particles_count_range": [50, 120],
+        "particles_lifetime_range": [20, 40]
+    },
+    "particle": {
+        "speed_range": [3, 6],
+        "size_range": [1, 2],
+        "lifetime_range": [80, 120],
+        "gravity": 0.12,
+        "line_max_length": 8,
+        "line_spacing": 1,
+        "line_fade_speed": 12,
+        "base_size": 1.5,
+        "fade_start": 15
+    }
+}
