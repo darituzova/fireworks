@@ -86,11 +86,16 @@ class Firework:
     def explode(self):
         self.exploded = True
         
-        # Создание частиц взрыва
+        # Создание частиц взрыва с одинаковым временем жизни
         number_particles = random.randint(100, 200)
+        particle_lifetime = random.randint(40, 80)  # Общее время жизни для всех частиц
+        
         for _ in range(number_particles):
-            self.particles.append(Particle(self.x, self.y, self.color))
-    
+            particle = Particle(self.x, self.y, self.color)
+            particle.lifetime = particle_lifetime  # Устанавливаем одинаковое время жизни
+            particle.max_lifetime = particle_lifetime  # И максимальное время жизни тоже одинаковое
+            self.particles.append(particle)
+        
     # Проверка на то, что или фейерверк еще не взорвался или он пока взрывется и его частицы живы
     def is_alive(self):
         return not self.exploded or len(self.particles) > 0
